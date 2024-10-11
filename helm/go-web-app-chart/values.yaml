@@ -3,7 +3,7 @@ replicaCount: 1
 image:
   repository: gourishinde9021/go-web-app
   pullPolicy: IfNotPresent
-  tag: "11290682576""v1"
+  tag: "11290733196""11290682576""v1"
 
 ingress:
   enabled: false
