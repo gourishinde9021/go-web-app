@@ -24,10 +24,10 @@ jobs:
        go-version: 1.22
 
    - name: Build
-     uses: go build -o go-web-app
+     run: go build -o go-web-app
      
    - name: Test
-     uses: go test ./...
+     run: go test ./...
 
   code-quality:
     runs-on: ubuntu-latest
@@ -41,35 +41,51 @@ jobs:
       with:
         version: v1.56.2
 
-push:
-  runs-on: ubuntu-latest
+  push:
+    runs-on: ubuntu-latest
 
-  needs: build
+    needs: build
 
-  steps:
-  - name: Checkout repository
-    uses: actions/checkout@v4
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
 
-  - name: Set up Docker buildx
-    uses: docker/setup-buildx-action/v1
+    - name: Set up Docker buildx
+      uses: docker/setup-buildx-action@v1
 
-  - name: Login to DockerHub
-    uses: docker/login-action@v3
-    with:
-      username: ${{ secrets.DOCKERHUB_USERNAME }}
-      password: ${{ secrets.DOCKERHUB_TOKEN }}
+    - name: Login to DockerHub
+      uses: docker/login-action@v3
+      with:
+        username: ${{ secrets.DOCKERHUB_USERNAME }}
+        password: ${{ secrets.DOCKERHUB_TOKEN }}
 
-  - name: Build and push action
-    uses: docker/build-push-action/v6
-    with:
-      context: .
-      file: ./Dockerfile
-      push: true
-      tags: ${{ secrets.DOCKERHUB_USERNAME }}/go-weg-app:${{github.run_id}}
-
-
-
-
-
-
+    - name: Build and push action
+      uses: docker/build-push-action@v6
+      with:
+        context: .
+        file: ./Dockerfile
+        push: true
+        tags: ${{ secrets.DOCKERHUB_USERNAME }}/go-weg-app:${{github.run_id}}
         
+  update-newtag-in-helm-chart:
+    runs-on: ubuntu-latest
+
+    needs: push
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.TOKEN }}
+
+    - name: Update tag in Helm chart
+      run: |
+        sed -i 's/tag: */tag: "${{github.run_id}}"/' helm/go-web-app-chart/values.yaml
+
+    - name: Commit and push changes
+      run: |
+        git config --global user.email "gourishinde9021@gmail.com"
+        git config --global user.name "Gouri Shinde"
+        git add helm/go-web-app-chart/values.yaml
+        git commit -m "Update tag in Helm Chart"
+        git push
